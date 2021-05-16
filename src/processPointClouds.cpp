@@ -2,7 +2,11 @@
 
 #include "processPointClouds.h"
 
+#include <pcl/PCLPointCloud2.h>
 #include <pcl/PointIndices.h>
+#include <pcl/filters/crop_box.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/segmentation/extract_clusters.h>
 
@@ -25,14 +29,42 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
   // Time segmentation process
   auto startTime = std::chrono::steady_clock::now();
 
-  // TODO:: Fill in the function to do voxel grid point reduction and region
-  // based filtering
+  typename pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>);
+  typename pcl::PointCloud<PointT>::Ptr cloud_cropped(new pcl::PointCloud<PointT>);
+  typename pcl::VoxelGrid<PointT> sor;
+  sor.setInputCloud(cloud);
+  sor.setLeafSize(filterRes, filterRes, filterRes);
+  sor.filter(*cloud_filtered);
+
+  typename pcl::CropBox<PointT> crop(true);
+  crop.setMin(minPoint);
+  crop.setMax(maxPoint);
+  crop.setInputCloud(cloud_filtered);
+  crop.filter(*cloud_cropped);
+
+  std::vector<int> roofIndicies;
+  typename pcl::CropBox<PointT> roof(true);
+  roof.setMin(Eigen::Vector4f(-1.5, -1.7, -1, 1));
+  roof.setMax(Eigen::Vector4f(2.6, 1.7, -0.4, 1));
+  roof.setInputCloud(cloud_cropped);
+  roof.filter(roofIndicies);
+
+  pcl::PointIndices::Ptr roofInliers(new pcl::PointIndices);
+  for (int point : roofIndicies) {
+    roofInliers->indices.push_back(point);
+  }
+
+  typename pcl::ExtractIndices<PointT> extract;
+  extract.setInputCloud(cloud_cropped);
+  extract.setIndices(roofInliers);
+  extract.setNegative(true);
+  extract.filter(*cloud_cropped);
 
   auto endTime = std::chrono::steady_clock::now();
   auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
   std::cout << "filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
 
-  return cloud;
+  return cloud_cropped;
 }
 
 template <typename PointT>
@@ -41,7 +73,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
   typename pcl::PointCloud<PointT>::Ptr obstCloud(new pcl::PointCloud<PointT>());
   typename pcl::PointCloud<PointT>::Ptr planeCloud(new pcl::PointCloud<PointT>());
 
-  pcl::ExtractIndices<pcl::PointXYZ> extract;
+  typename pcl::ExtractIndices<PointT> extract;
   extract.setInputCloud(cloud);
   extract.setIndices(inliers);
 
