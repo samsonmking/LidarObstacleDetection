@@ -71,9 +71,9 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr &viewer) {
 
 void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointClouds<pcl::PointXYZI> *pointProcessor,
                const pcl::PointCloud<pcl::PointXYZI>::Ptr &inputCloud) {
-  auto filterCloud = pointProcessor->FilterCloud(inputCloud, 0.15, Eigen::Vector4f(-25.0, -5.0, -2.0, 1.0), Eigen::Vector4f(25.0, 6.5, 0.5, 1.0));
+  auto filterCloud = pointProcessor->FilterCloud(inputCloud, 0.15, Eigen::Vector4f(-25.0, -5.0, -2.0, 1.0), Eigen::Vector4f(25.0, 7.0, 0.5, 1.0));
   auto segmentCloud = pointProcessor->SegmentPlane(filterCloud, 100, 0.2);
-  auto cloudClusters = pointProcessor->Clustering(segmentCloud.first, 0.5, 20, 300);
+  auto cloudClusters = pointProcessor->Clustering(segmentCloud.first, 0.6, 30, 1000);
 
   std::vector<Color> colors = {Color(1, 0, 0), Color(0.5, 0.5, 0), Color(0, 0, 1)};
 
@@ -81,7 +81,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointCloud
     std::cout << "cluster size ";
     auto cluster = cloudClusters[i];
     pointProcessor->numPoints(cluster);
-    renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(i), colors[i]);
+    renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(i), colors[i % 3]);
     Box box = pointProcessor->BoundingBox(cluster);
     renderBox(viewer, box, i);
   }
@@ -139,6 +139,6 @@ int main(int argc, char **argv) {
     streamIterator++;
     if (streamIterator == stream.end()) streamIterator = stream.begin();
 
-    viewer->spinOnce(100);
+    viewer->spinOnce();
   }
 }
