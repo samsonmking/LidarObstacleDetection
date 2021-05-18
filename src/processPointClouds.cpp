@@ -12,6 +12,7 @@
 
 #include <memory>
 
+// Using templates for KDTree so help out the linker
 #include "kdtree.cpp"
 
 // constructor:
